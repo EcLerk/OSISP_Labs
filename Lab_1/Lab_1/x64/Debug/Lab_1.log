@@ -1,0 +1,4 @@
+﻿  main.cpp
+E:\OSISP_Labs\Lab_1\Lab_1\main.cpp(116,9): warning C4101: hdc: неиспользованная локальная переменная
+E:\OSISP_Labs\Lab_1\Lab_1\main.cpp(115,17): warning C4101: ps: неиспользованная локальная переменная
+  Lab_1.vcxproj -> E:\OSISP_Labs\Lab_1\x64\Debug\Lab_1.exe
