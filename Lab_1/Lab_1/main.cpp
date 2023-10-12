@@ -1,33 +1,12 @@
 #include <windows.h>
 #include <tchar.h>
+#include "main.h"
 
-// Global variables
-//#define ID_EDIT 12
-#define textBufferSize 256
-
-#define onExit 10
-#define onFileLoad 11
-#define onFileSave 12
-#define onClearClicked 13
-
-// The main window class name.
-char Buffer[textBufferSize];
-
-OPENFILENAMEA ofn;
-char filename[260];
-
-static TCHAR szWindowClass[] = _T("DesktopApp");
-
-// The string that appears in the application's title bar.
-static TCHAR szTitle[] = _T("Text Editor");
-
-static HWND hWndEdit;
-// Stored instance handle for use in Win32 API calls such as FindResource
-HINSTANCE hInst;
 
 // Forward declarations of functions included in this code module:
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 void AddWidget(HWND hWnd);
+
 int WINAPI WinMain(
     _In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
@@ -54,7 +33,7 @@ int WINAPI WinMain(
     {
         MessageBox(NULL,
             _T("Call to RegisterClassEx failed!"),
-            _T("Windows Desktop Guided Tour"),
+            _T("Windows Desktop "),
             NULL);
 
         return 1;
@@ -192,32 +171,20 @@ void SetOpenFileParams(HWND hWnd)
 
 void AddWidget(HWND hWnd)
 {
-   // CreateWindowA("static", "some window", WS_VISIBLE | WS_CHILD, 5, 5, 500, 20, hWnd, NULL, NULL, NULL);
-  /*  hWndEdit = CreateWindowA("edit", NULL,
-        WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL |
-        WS_BORDER | ES_LEFT | ES_MULTILINE |
-        ES_AUTOHSCROLL | ES_AUTOVSCROLL,
-        0, 0, 100, 100,
-        hWnd, NULL,
-        NULL, NULL);*/
-        // Creating a editfield for a text
+    // Creating a editfield for a text
     hWndEdit = CreateWindow(L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | ES_MULTILINE, 5, 5, 470, 400, hWnd, (HMENU)1, NULL, NULL);
-    //hWndEdit = CreateWindowA("edit", NULL,
-    //    WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_MULTILINE,
-    //    0, 0, 100, 100, // Здесь устанавливаем размер текстового поля 100x100
-    //    hWnd, NULL,
-    //    NULL, NULL);
+    windowRectangle = { 500, 0, 0, 600 };
 
-   CreateWindowA("button", "Clear", WS_VISIBLE | WS_CHILD,
+    CreateWindowA("edit", "0", WS_VISIBLE | WS_CHILD | ES_CENTER | ES_NUMBER | WS_BORDER , 5, 445, 100, 20, hWnd, HMENU(DlgIndexColorR), NULL, NULL);
+    CreateWindowA("edit", "0", WS_VISIBLE | WS_CHILD | ES_CENTER | ES_NUMBER | WS_BORDER, 120, 445, 100, 20, hWnd, HMENU(DlgIndexColorB), NULL, NULL);
+    CreateWindowA("edit", "0", WS_VISIBLE | WS_CHILD | ES_CENTER | ES_NUMBER | WS_BORDER, 240, 445, 100, 20, hWnd, HMENU(DlgIndexColorG), NULL, NULL);
+
+    CreateWindowA("button", "Clear", WS_VISIBLE | WS_CHILD,
        5, 410, 100, 25, // Размер и позиция кнопки под текстовым полем
        hWnd, (HMENU)onClearClicked, NULL, NULL);
-    //hWndEdit = CreateWindowA("edit", NULL,
-    //    WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_MULTILINE,
-    //    0, 0, 100, 100, // Здесь устанавливаем фиксированный размер 100x100
-    //    hWnd, NULL,
-    //    NULL, NULL);
-    //CreateWindowA("button", "Click me!", WS_VISIBLE | WS_CHILD | ES_CENTER, 5 ,420,120, 20, hWnd, NULL, NULL, NULL);
+    CreateWindowA("button", "Set color", WS_VISIBLE | WS_CHILD, 115, 410, 100, 25, hWnd, (HMENU)onReadColor, NULL, NULL);
 }
+
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
 //  PURPOSE:  Processes messages for the main window.
@@ -238,10 +205,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
        AddMenu(hWnd);
         
         SetOpenFileParams(hWnd);
+        font = CreateFontA(26, 10, 0, 0, FW_MEDIUM, 
+            TRUE, FALSE, FALSE,
+            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, 
+            CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
+            FF_ROMAN, "MyFont");
+
+        SendMessage(hWndEdit, WM_SETFONT, WPARAM(font), TRUE);
         return 0;
+
     case WM_PAINT:
     {
-        PAINTSTRUCT ps;
+        //PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hWnd, &ps);
 
         RECT rc;
@@ -252,7 +227,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         FillRect(hdc, &rc, hLightBlueBrush);
         DeleteObject(hLightBlueBrush);
 
-
+        FillRect(ps.hdc, &windowRectangle, brushRectangle);
         // Main Background the same as the system
         //FillRect(hdc, &rc, (HBRUSH)(COLOR_WINDOW + 1));
 
@@ -289,6 +264,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             return 0;
         case onClearClicked:
             SetWindowTextA(hWndEdit, "");
+            return 0;
+
+        case onReadColor:
+
+            brushRectangle = CreateSolidBrush(
+                RGB(GetDlgItemInt(hWnd, DlgIndexColorR, FALSE, false),
+                    GetDlgItemInt(hWnd, DlgIndexColorG, FALSE, false),
+                    GetDlgItemInt(hWnd, DlgIndexColorB, FALSE, false))
+            );
+
+            RedrawWindow(hWnd, NULL, NULL, RDW_UPDATENOW | RDW_INVALIDATE);
+            return 0;
+
         case 1:
             if (HIWORD(wParam) == EN_ERRSPACE ||
                 HIWORD(wParam) == EN_MAXTEXT)
