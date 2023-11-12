@@ -17,6 +17,13 @@
 // The main window class name.
 char Buffer[textBufferSize];
 
+//mapped file
+HANDLE hFile = NULL;
+HANDLE hMapping = NULL;
+size_t fsize = 0;//размер файла
+LPVOID dataPtr = NULL;//указатель на участок памяти с отображением
+CONST WCHAR* fileName = L"output.txt";
+
 //PAINTSTRUCT ps;
 RECT windowRectangle;
 HBRUSH brushRectangle;
@@ -31,5 +38,6 @@ static TCHAR szWindowClass[] = _T("DesktopApp");
 static TCHAR szTitle[] = _T("Text Editor");
 
 static HWND hWndEdit;
+HWND button;
 // Stored instance handle for use in Win32 API calls such as FindResource
 HINSTANCE hInst;

@@ -1,11 +1,15 @@
 #include <windows.h>
 #include <tchar.h>
 #include "main.h"
+#include <string>
 
 
 // Forward declarations of functions included in this code module:
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 void AddWidget(HWND hWnd);
+void InitializeMappingFile(/*LPCWSTR fileName*/);
+void DeleteMappingFile();
+
 
 int WINAPI WinMain(
     _In_ HINSTANCE hInstance,
@@ -110,48 +114,87 @@ void AddMenu(HWND hWnd)
     SetMenu(hWnd, RootMenu);
 }
 
-void SaveFile(LPCSTR path, HWND hWndEdit)
+void SaveFile(LPCWSTR path, HWND hWndEdit)
 {
-    HANDLE fileToSave = CreateFileA(
-        path,
-        GENERIC_WRITE,
-        0,
-        NULL,
-        CREATE_ALWAYS,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL
-    );
+    InitializeMappingFile();
 
-    int saveLength = GetWindowTextLength(hWndEdit) + 1;
+    int saveLength = (GetWindowTextLength(hWndEdit) + 1) * sizeof(CHAR);
     char* data = new char[saveLength];
 
     saveLength = GetWindowTextA(hWndEdit, data, saveLength);
 
-    DWORD bytesIterated;
-    WriteFile(fileToSave, data, saveLength, &bytesIterated, NULL);
+    memcpy((CHAR*)dataPtr, data, saveLength);
 
-    CloseHandle(fileToSave);
+
+    DeleteMappingFile();
     delete[] data;
 }
 
 void LoadFile(LPCSTR path, HWND hWndEdit)
 {
-    HANDLE fileToLoad = CreateFileA(
-        path,
+    // CreateFile
+    hFile = CreateFile(
+        fileName,                     // Filename
+        GENERIC_READ | GENERIC_WRITE, // Access mode (read and write)
+        0,                            // No sharing
+        NULL,                         // Default protection
+        OPEN_EXISTING,                // Create a new file or overwrite an existing
+        FILE_ATTRIBUTE_NORMAL,        // File attributes (normal)
+        NULL                          // Template for creating files
+    );
+
+    if (hFile == INVALID_HANDLE_VALUE) {
+        MessageBox(NULL, L"CreateFile failed!", L"Error", MB_ICONERROR);
+        return;
+    }
+
+    // Create Mapping
+    hMapping = CreateFileMapping(
+        hFile,                       // File descriptor
+        NULL,                        // Default protection
+        PAGE_READWRITE,              // Display access mode (read and write)
+        0,                           // Display file size (0 means the whole file)
+        1048576,                       // Display file size (the highest byte)
+        NULL                         // Display file name
+    );
+
+    if (hMapping == NULL) {
+        MessageBox(NULL, L"CreateFileMapping failed!", L"Error", MB_ICONERROR);
+        CloseHandle(hFile);
+        return;
+    }
+
+    // Display the mapped file in memory
+    dataPtr = MapViewOfFile(hMapping, FILE_MAP_ALL_ACCESS, 0, 0, 1048576);
+    if (dataPtr == NULL) {
+        MessageBox(NULL, L"MapViewOfFile failed!", L"Error", MB_ICONERROR);
+        CloseHandle(hMapping);
+        CloseHandle(hFile);
+        return;
+    }
+
+
+    /*
+    HANDLE fileToLoad = CreateFile(
+        fileName,
         GENERIC_READ,
         0,
         NULL,
         OPEN_EXISTING,
         FILE_ATTRIBUTE_NORMAL,
         NULL
-    );
+    );*/
 
-    DWORD bytesIterated;
-    ReadFile(fileToLoad, Buffer, textBufferSize, &bytesIterated, NULL);
+    //DWORD bytesIterated;
+    //ReadFile(fileToLoad, Buffer, textBufferSize, &bytesIterated, NULL);
 
-    SetWindowTextA(hWndEdit, Buffer);
-    memset(Buffer, 0, 100);
-    CloseHandle(fileToLoad);
+    int saveLength = 1048576;
+    char* data = new char[saveLength];
+    memcpy(data, (CHAR*)dataPtr, saveLength);
+    SetWindowTextA(hWndEdit, data);
+    DeleteMappingFile();
+    //memset(Buffer, 0, 100);
+    //CloseHandle(fileToLoad);
 }
 
 void SetOpenFileParams(HWND hWnd)
@@ -179,10 +222,72 @@ void AddWidget(HWND hWnd)
     CreateWindowA("edit", "0", WS_VISIBLE | WS_CHILD | ES_CENTER | ES_NUMBER | WS_BORDER, 120, 445, 100, 20, hWnd, HMENU(DlgIndexColorB), NULL, NULL);
     CreateWindowA("edit", "0", WS_VISIBLE | WS_CHILD | ES_CENTER | ES_NUMBER | WS_BORDER, 240, 445, 100, 20, hWnd, HMENU(DlgIndexColorG), NULL, NULL);
 
-    CreateWindowA("button", "Clear", WS_VISIBLE | WS_CHILD,
+    button = CreateWindowA("button", "Clear", WS_VISIBLE | WS_CHILD | BS_OWNERDRAW,
        5, 410, 100, 25, // Размер и позиция кнопки под текстовым полем
        hWnd, (HMENU)onClearClicked, NULL, NULL);
     CreateWindowA("button", "Set color", WS_VISIBLE | WS_CHILD, 115, 410, 100, 25, hWnd, (HMENU)onReadColor, NULL, NULL);
+}
+
+VOID InitializeMappingFile(/*LPCWSTR fileName*/) {
+
+    // CreateFile
+    hFile = CreateFile(
+        fileName,                     // Filename
+        GENERIC_READ | GENERIC_WRITE, // Access mode (read and write)
+        0,                            // No sharing
+        NULL,                         // Default protection
+        CREATE_ALWAYS,                // Create a new file or overwrite an existing
+        FILE_ATTRIBUTE_NORMAL,        // File attributes (normal)
+        NULL                          // Template for creating files
+    );
+
+    if (hFile == INVALID_HANDLE_VALUE) {
+        MessageBox(NULL, L"CreateFile failed!", L"Error", MB_ICONERROR);
+        return;
+    }
+
+    // Create Mapping
+    hMapping = CreateFileMapping(
+        hFile,                       // File descriptor
+        NULL,                        // Default protection
+        PAGE_READWRITE,              // Display access mode (read and write)
+        0,                           // Display file size (0 means the whole file)
+        1048576,                       // Display file size (the highest byte)
+        NULL                         // Display file name
+    );
+
+    if (hMapping == NULL) {
+        MessageBox(NULL, L"CreateFileMapping failed!", L"Error", MB_ICONERROR);
+        CloseHandle(hFile);
+        return;
+    }
+
+    // Display the mapped file in memory
+    dataPtr = MapViewOfFile(hMapping, FILE_MAP_ALL_ACCESS, 0, 0, 1048576);
+    if (dataPtr == NULL) {
+        MessageBox(NULL, L"MapViewOfFile failed!", L"Error", MB_ICONERROR);
+        CloseHandle(hMapping);
+        CloseHandle(hFile);
+        return;
+    }
+}
+
+VOID DeleteMappingFile() {
+
+    if (dataPtr != NULL) {
+        UnmapViewOfFile(dataPtr);
+        dataPtr = NULL;
+    }
+
+    if (hMapping != NULL) {
+        CloseHandle(hMapping);
+        hMapping = NULL;
+    }
+
+    if (hFile != INVALID_HANDLE_VALUE) {
+        CloseHandle(hFile);
+        hFile = INVALID_HANDLE_VALUE;
+    }
 }
 
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
@@ -204,7 +309,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
        AddWidget(hWnd);
        AddMenu(hWnd);
         
-        SetOpenFileParams(hWnd);
+       
+       
+
+        //SetOpenFileParams(hWnd);
         font = CreateFontA(26, 10, 0, 0, FW_MEDIUM, 
             TRUE, FALSE, FALSE,
             DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, 
@@ -216,25 +324,36 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case WM_PAINT:
     {
-        //PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hWnd, &ps);
 
-        RECT rc;
-        GetClientRect(hWnd, &rc);
-
-        // Setting the background color to light blue (RGB(153, 204, 255))
-        HBRUSH hLightBlueBrush = CreateSolidBrush(RGB(153, 204, 255));
-        FillRect(hdc, &rc, hLightBlueBrush);
-        DeleteObject(hLightBlueBrush);
-
         FillRect(ps.hdc, &windowRectangle, brushRectangle);
+        //SetTextColor((HDC)button, RGB(255, 255, 255));
         // Main Background the same as the system
         //FillRect(hdc, &rc, (HBRUSH)(COLOR_WINDOW + 1));
 
         EndPaint(hWnd, &ps);
     }
     break;
-
+    case WM_CTLCOLOREDIT:
+    {
+        HBRUSH hBrush = CreateSolidBrush(RGB(255, 0, 0)); // Красный фон
+        SetBkColor((HDC)wParam, RGB(255, 0, 0)); // Устанавливаем цвет фона
+        SetTextColor((HDC)wParam, RGB(255, 255, 255)); // Устанавливаем цвет текста
+        return (LRESULT)hBrush;
+    }
+    case WM_CTLCOLORBTN:
+    {
+        HBRUSH hBrush = CreateSolidBrush(RGB(255, 0, 0));
+        //SetBkColor((HDC)wParam, );
+        //SetTextColor((HDC)wParam, RGB(255, 255, 255));
+        return (LRESULT)hBrush;
+    }
+    //case WM_DRAWITEM:
+    //{
+    //    SetBkColor((HDC)wParam, RGB(255, 0, 0)); // Устанавливаем цвет фона
+    //    SetTextColor((HDC)wParam, RGB(255, 255, 255)); // Устанавливаем цвет текста
+    //    SelectObject()
+    //}
     //case WM_SETFOCUS:
     //    SetFocus(hWndEdit);
     //    return 0;
@@ -248,15 +367,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         switch (LOWORD(wParam))
         {
         case onFileLoad:
-            if (GetOpenFileNameA(&ofn))
-            {
+            
                 LoadFile(filename, hWndEdit);
-            }
+            
             return 0;
         case onFileSave:
-            if (GetSaveFileNameA(&ofn)) {
-                SaveFile(filename, hWndEdit);
-            }
+            //if (GetSaveFileNameA(&ofn)) {
+                SaveFile(fileName/*(LPCWSTR)ofn.lpstrFile*/, hWndEdit);
+            //}
             
             return 0;
         case onExit:
@@ -272,6 +390,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 RGB(GetDlgItemInt(hWnd, DlgIndexColorR, FALSE, false),
                     GetDlgItemInt(hWnd, DlgIndexColorG, FALSE, false),
                     GetDlgItemInt(hWnd, DlgIndexColorB, FALSE, false))
+                
             );
 
             RedrawWindow(hWnd, NULL, NULL, RDW_UPDATENOW | RDW_INVALIDATE);

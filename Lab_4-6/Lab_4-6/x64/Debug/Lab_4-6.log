@@ -1,0 +1,4 @@
+﻿  Main.cpp
+E:\OSISP_Labs\Lab_4-6\Lab_4-6\Main.cpp(84,52): warning C4244: аргумент: преобразование "ULONGLONG" в "DWORD", возможна потеря данных
+E:\OSISP_Labs\Lab_4-6\Lab_4-6\Main.cpp(104,19): warning C4244: инициализация: преобразование "float" в "int", возможна потеря данных
+  Lab_4-6.vcxproj -> E:\OSISP_Labs\Lab_4-6\x64\Debug\Lab_4-6.exe
