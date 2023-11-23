@@ -1,0 +1,3 @@
+﻿  Source.cpp
+E:\OSISP_Labs\Lab7-8\Lab7-8\Server\Source.cpp(113,53): warning C4267: аргумент: преобразование из "size_t" в "int"; возможна потеря данных
+  Server.vcxproj -> E:\OSISP_Labs\Lab7-8\Lab7-8\x64\Debug\Server.exe
